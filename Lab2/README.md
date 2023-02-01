@@ -1,7 +1,7 @@
 WILD 562 - Lab 2: Habitat USE
 ================
 Mark Hebblewhite
-1/16/2021
+1/25/2023
 
 # Lab 2 - Introduction to Analysis of Habitat Use by Wolves in Banff National Park
 
@@ -131,13 +131,13 @@ create the two main covariates related to wolf occupancy.
 The R packages we will load up front today are:
 
 ``` r
-packages <- c("ks", "plotrix", "lattice", "adehabitatHR", "maptools", "mapview", "raster", "ggplot2","colorRamps", "sf", "terra", "tmap", "stars", "dplyr")
+packages <- c("ks", "here", "plotrix", "lattice", "adehabitatHR", "maptools", "mapview", "ggplot2","colorRamps", "sf", "terra", "tmap", "stars", "dplyr", "tmap")
 ```
 
 Using the wrapper package reviewed in Lab 1:
 
 ``` r
-#function to install and load required packages
+# Function to install and load required packages (this was shown in first lab)
 ipak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
   if (length(new.pkg)) 
@@ -145,7 +145,7 @@ ipak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-#run function to install packages
+# Run function to install packages with list created above
 ipak(packages)
 ```
 
@@ -168,14 +168,17 @@ for students new to using R for spatial data. Here are 2
 2)  <https://www.neonscience.org/resources/learning-hub/tutorials/dc-plot-raster-data-r>
 
 First we will read in shapefiles from the GISdata folder in your R
-project directory.
+project directory. We will use tmap to create basic maps of these
+spatial layers. Read more about tmap here:
+<https://cran.r-project.org/web/packages/tmap/vignettes/tmap-getstarted.html>
 
 ``` r
-elc_habitat<-st_read(here::here("Data","elc_habitat.shp"))
+# Read in ELC and human access shape files
+elc_habitat <- st_read(here("Data", "elc_habitat.shp"))
 ```
 
     ## Reading layer `elc_habitat' from data source 
-    ##   `C:\Users\Administrator.KJLWS11\Documents\Labs 2-6\Data\elc_habitat.shp' 
+    ##   `C:\Users\jorda\Box\Jordan_Workspace\Jordan_Masters\Coursework\WILD562\WILD562_Labs\Labs-2-6\Data\elc_habitat.shp' 
     ##   using driver `ESRI Shapefile'
     ## Simple feature collection with 8188 features and 64 fields
     ## Geometry type: POLYGON
@@ -184,11 +187,11 @@ elc_habitat<-st_read(here::here("Data","elc_habitat.shp"))
     ## Projected CRS: NAD83 / UTM zone 11N
 
 ``` r
-humanaccess<-st_read(here::here("Data","humanacess.shp"))
+humanaccess <- st_read(here("Data", "humanacess.shp"))
 ```
 
     ## Reading layer `humanacess' from data source 
-    ##   `C:\Users\Administrator.KJLWS11\Documents\Labs 2-6\Data\humanacess.shp' 
+    ##   `C:\Users\jorda\Box\Jordan_Workspace\Jordan_Masters\Coursework\WILD562\WILD562_Labs\Labs-2-6\Data\humanacess.shp' 
     ##   using driver `ESRI Shapefile'
     ## Simple feature collection with 24134 features and 39 fields
     ## Geometry type: MULTILINESTRING
@@ -197,12 +200,14 @@ humanaccess<-st_read(here::here("Data","humanacess.shp"))
     ## Projected CRS: NAD83 / UTM zone 11N
 
 ``` r
-plot(elc_habitat) ## not sure if you want to keep this in here to show what base plot would do??
+# Good practice to plot what was loaded to see how it looks
+plot(elc_habitat) 
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](README_files/figure-gfm/read%20in%20data-1.png)<!-- -->
 
 ``` r
+# tmap is another option for this, plot version is not interactive (view is interactive), the mode gets set first then maps can be made
 tmap_mode("plot") 
 ```
 
@@ -212,20 +217,21 @@ tmap_mode("plot")
 tm_shape(elc_habitat) + tm_sf()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-3-2.png)<!-- -->
+![](README_files/figure-gfm/read%20in%20data-2.png)<!-- -->
 
 ``` r
 tm_shape(humanaccess) + tm_sf()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-3-3.png)<!-- -->
+![](README_files/figure-gfm/read%20in%20data-3.png)<!-- -->
 
 ``` r
-wolfyht<-st_read(here::here("Data","wolfyht.shp"))
+# Read in Wolf Ya Ha Tinda data too and look at the first few rows
+wolfyht <- st_read(here("Data","wolfyht.shp"))
 ```
 
     ## Reading layer `wolfyht' from data source 
-    ##   `C:\Users\Administrator.KJLWS11\Documents\Labs 2-6\Data\wolfyht.shp' 
+    ##   `C:\Users\jorda\Box\Jordan_Workspace\Jordan_Masters\Coursework\WILD562\WILD562_Labs\Labs-2-6\Data\wolfyht.shp' 
     ##   using driver `ESRI Shapefile'
     ## Simple feature collection with 413 features and 21 fields
     ## Geometry type: POINT
@@ -264,23 +270,27 @@ head(wolfyht)
     ## 5       4       5       4    1587 POINT (558477 5697212)
     ## 6       5       5       5    1402 POINT (586000 5674300)
 
-As a preliminary step, lets plot some of the wolfyht using the base plot
-function, and using some of the structure of the wolfyht object. Lets
-remind ourselves of the structure of the SpatialPointsDataFrame first.
+As a preliminary step, let’s plot some of the wolfyht using the base
+plot function, and using some of the structure of the wolfyht object.
+Let’s remind ourselves of the structure of the sf object wolfyht.
 
 ``` r
+# Check out some aspects of the wolf data,
+# What class is it
 class(wolfyht)
 ```
 
     ## [1] "sf"         "data.frame"
 
 ``` r
-crs(wolfyht,proj = TRUE) # note this is a UTM projected map system. 
+# Does it have a projection
+crs(wolfyht,proj = TRUE) # note this is a UTM projected map system.
 ```
 
     ## [1] "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
 
 ``` r
+# What is the structure
 str(wolfyht)
 ```
 
@@ -312,13 +322,22 @@ str(wolfyht)
     ##   ..- attr(*, "names")= chr [1:21] "ID" "ID2" "NAME" "NoCollared" ...
 
 ``` r
-# Note that there are two fields, Easting and Northing which are the X and Y coordinates in UTM zone 11.  We will use these to map it for each PackID
-# base plot of wolf packs by color with legend
-base::plot(wolfyht$EASTING,wolfyht$NORTHING,col=c("red","blue")[wolfyht$PackID],ylab="Northing",xlab="Easting")
-legend(555000,5742500,unique(wolfyht$Pack),col=c("blue","red"),pch=1) 
+# Note that there are two fields, Easting and Northing which are the X and Y coordinates in UTM zone 11. We will use these to map it for each PackID
+
+# Base plot of wolf packs by color with legend
+plot(wolfyht$EASTING, 
+     wolfyht$NORTHING, 
+     col = c("red", "blue")[wolfyht$PackID],
+     ylab = "Northing",
+     xlab = "Easting")
+legend(555000, 
+       5742500, 
+       unique(wolfyht$Pack), 
+       col = c("blue", "red"), 
+       pch = 1) 
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](README_files/figure-gfm/plot%20wolf%20data-1.png)<!-- -->
 
 ## Habitat Suitability Index Models
 
@@ -343,38 +362,47 @@ lets continue.
 
 ``` r
 #For fun - if you want to play with using package tmap()
-#construct tmap plot for Moose Winter habitat
-tm_shape(elc_habitat)+tm_sf("MOOSE_W", border.alpha = 0)
+# Construct tmap plot for Moose Winter habitat
+tm_shape(elc_habitat) + tm_sf("MOOSE_W", border.alpha = 0)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](README_files/figure-gfm/moose%20maps-1.png)<!-- -->
 
 ``` r
-#construct ggplot2 plot for Moose Winter Habitat
+# Construct ggplot2 plot for Moose Winter Habitat
 # Note - color = NA in the geom_sf() removes the border lines
-elk_plot<-ggplot() + 
-  geom_sf(data = elc_habitat, mapping = aes(fill = as.factor(MOOSE_W)), color = NA) + labs(x="Easting",y="Northing") + theme(axis.text.y = element_text(angle = 90, hjust=0.5))
-
-#adjust fill colors of MOOSE_W  (note that I just selected some random colors, but made "7" as blue)
-elk_plot2 <- elk_plot + scale_fill_manual(name="MOOSE_W",values=c("gray","gray", "red", "orange", "yellow", "green","darkblue"))
-elk_plot2
+moose_plot <- ggplot() + 
+  geom_sf(data = elc_habitat, 
+          mapping = aes(fill = as.factor(MOOSE_W)), 
+          color = NA) + 
+  labs(x = "Easting",
+       y = "Northing") + 
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  # Adjust fill colors of MOOSE_W  (note that I just selected some random colors, but made "7" as blue)
+  scale_fill_manual(name = "MOOSE_W",
+                    values = c("gray", "gray", "red", "orange", "yellow", "green", "darkblue"))
+moose_plot
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+![](README_files/figure-gfm/moose%20maps-2.png)<!-- -->
 
 Bighorn Sheep Winter Habitat Model
 
 ``` r
-#construct ggplot2 plot for Moose Winter Habitat
-sheep_plot<-ggplot() + 
-  geom_sf(data = elc_habitat, mapping = aes(fill = as.factor(SHEEP_W)), color = NA) + labs(x="Easting",y="Northing") + theme(axis.text.y = element_text(angle = 90, hjust=0.5))
-
-#adjust fill colors of MOOSE_W  (note that I just selected some random colors, but made "7" as blue)
-sheep_plot2 <- sheep_plot + scale_fill_manual(name="SHEEP_W",values=c("gray","gray", "red", "orange", "yellow", "green","darkblue"))
-sheep_plot2
+# Construct ggplot2 plot for Sheep Winter Habitat
+sheep_plot <- ggplot() + 
+  geom_sf(data = elc_habitat, 
+          mapping = aes(fill = as.factor(SHEEP_W)), color = NA) + 
+  labs(x = "Easting",
+       y = "Northing") + 
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  # Adjust fill colors of MOOSE_W  (note that I just selected some random colors, but made "7" as blue)
+  scale_fill_manual(name = "SHEEP_W",
+                    values = c("gray", "gray", "red", "orange", "yellow", "green", "darkblue"))
+sheep_plot
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](README_files/figure-gfm/sheep%20maps-1.png)<!-- -->
 
 ## Part 1b - Spatial Raster Operations
 
@@ -408,86 +436,116 @@ projection for all subsequent analyses in R.
     a consistent resolution.
 
 ``` r
-# Create a mask raster to use as a template for converting shapefile data to rasters
-#create an empty raster
+## Currently using terra package -- not sure with STARS yet -- SMS
+# Create a mask raster to use as a template for converting shape file data to rasters
+# Create an empty raster
 mask.raster <- rast()
 
-#set extent (note that I customized this extent so it covered both elc_habitat and humanacess)
-ext(mask.raster) <- c(xmin=443680.6, xmax=650430.4, ymin=5618416, ymax=5789236)     
+# Set extent of that raster to cover all layers that will be included
+ext(mask.raster) <- c(xmin = 443680.6, 
+                      xmax = 650430.4, 
+                      ymin = 5618416, 
+                      ymax = 5789236)   
 
-#set the resolution to 30 m 
-res(mask.raster)<-30
+# Set the resolution to 30 m (use larger to speed up processing if needed)
+res(mask.raster) <- 30
 
-#match projection to elc_habitat shapefile
-crs(mask.raster)<- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+# Match projection to elc_habitat shapefile
+crs(mask.raster) <- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+# Could also do?:
+crs(mask.raster) <- crs(elc_habitat)
 
-#set all values of mask.raster to zero
-mask.raster[]<-0
+# Set all values of mask.raster to zero
+mask.raster[] <- 0
 ```
 
 Next I use the terra::rasterize() to create rasters for DEER_W, MOOSE_W,
 ELK_W, SHEEP_W, GOAT_W, WOLF_W
 
 ``` r
-##This does not take as long as the raster() package and fasterize is no longer needed
-deer_w<-terra::rasterize(elc_habitat, mask.raster, field="DEER_W")
-moose_w<-terra::rasterize(elc_habitat, mask.raster, field="MOOSE_W")
-elk_w<-terra::rasterize(elc_habitat, mask.raster, field="ELK_W")
-sheep_w<-terra::rasterize(elc_habitat, mask.raster, field="SHEEP_W")
-goat_w<-terra::rasterize(elc_habitat, mask.raster, field="GOAT_W")
-wolf_w<-terra::rasterize(elc_habitat, mask.raster, field="WOLF_W")
+## This does not take as long as the raster() package and fasterize is no longer needed
+deer_w <- rasterize(elc_habitat, 
+                    mask.raster, 
+                    field = "DEER_W")
+moose_w <- rasterize(elc_habitat,
+                     mask.raster, 
+                     field = "MOOSE_W")
+elk_w <- rasterize(elc_habitat, 
+                   mask.raster, 
+                   field = "ELK_W")
+sheep_w <- rasterize(elc_habitat, 
+                     mask.raster, 
+                     field = "SHEEP_W")
+goat_w <- rasterize(elc_habitat, 
+                    mask.raster, 
+                    field = "GOAT_W")
+wolf_w <- rasterize(elc_habitat, 
+                    mask.raster, 
+                    field = "WOLF_W")
 
-#Alternative using Stars Package 
-#deer_w <- st_as_stars(elc_habitat, name = attr(elc_habitat, "DEER_W"))
-deer_w_stars <- st_rasterize(elc_habitat["DEER_W"])
-moose_w_stars <- st_rasterize(elc_habitat["MOOSE_W"])
-elk_w_stars <- st_rasterize(elc_habitat["ELK_W"])
-sheep_w_stars <- st_rasterize(elc_habitat["SHEEP_W"])
-goat_w_stars <- st_rasterize(elc_habitat["GOAT_W"])
-wolf_w_stars <- st_rasterize(elc_habitat["WOLF_W"])
-#plot result
+# #Alternative using Stars Package, this is faster by far
+# deer_w_stars <- st_rasterize(elc_habitat["DEER_W"])
+# moose_w_stars <- st_rasterize(elc_habitat["MOOSE_W"])
+# elk_w_stars <- st_rasterize(elc_habitat["ELK_W"])
+# sheep_w_stars <- st_rasterize(elc_habitat["SHEEP_W"])
+# goat_w_stars <- st_rasterize(elc_habitat["GOAT_W"])
+# wolf_w_stars <- st_rasterize(elc_habitat["WOLF_W"])
+
+# Plot result
 plot(wolf_w)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](README_files/figure-gfm/rasterize%20layers-1.png)<!-- -->
 
 ``` r
-plot(wolf_w_stars)
+# # For comparison what the rasterize with stars looks like:
+# plot(wolf_w_stars)
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
 
 Next, we need to align the previously developed rasters, elevation and
 distance to human access, with the raster.mask developed above to have
 the exact same extent, spatial resolution, projection, etc. We do so
 using the resample() function from the raster package.
 
-Learn more about resampling by typing `?terra::resample`
+Learn more about resampling by typing `?terra::resample` Exporting
+raster layers you have worked on using the `writeRaster` command from
+the terra package like this:
 
 ``` r
-#resample elevation and humanaccess to match mask.raster 
-#note - not sure how to do this with stars package yet -SMS - 1/24/2023
-elevation2<-resample(elevation, mask.raster, method="bilinear")
-disthumaccess2<-resample(disthumaccess, mask.raster, method="bilinear")
+# Write raster layers to file
+writeRaster(deer_w, 
+            here("Lab2", "Output", "DEER_W.tiff"), 
+            overwrite = TRUE)
 ```
 
-Exporting raster layers you have worked on using the `writeRaster`
-command from the terra package like this:
+For today’s lab we will use elevation and distance to human access
+rasters we created before the lab and re-load them from our working
+directory.
 
 ``` r
-#write raster layers to file
-writeRaster(deer_w, here::here("Lab2","Output", "DEER_W.tiff"), overwrite = TRUE)
+# Read in elevation raster with terra
+elev <- rast(here("Data", "Elevation2.tif")) #resampled
+
+# # Or read in elevation raster with stars
+# elevation_stars <- read_stars(here("Data", "Elevation2.tif"))
+
+# Reading in distance to human access raster with terra
+hum_acc <- rast(here("Data", "DistFromHumanAccess2.tif")) 
+high_acc <- rast(here("Data", "DistFromHighHumanAccess2.tif")) 
 ```
 
-For today’s lab we will us elevation rasters we created before the lab
-and re-load them from our working directory.
-
 ``` r
-#reading in elevation raster with terra
-elevation2<-rast(here::here("Data","Elevation2.tif")) #resampled
-
-#reading in elevation raster with stars
-elevation2_stars <- read_stars(here::here("Data","Elevation2.tif"))
+# Resample elevation and human access to match mask.raster 
+# Note - not sure how to do this with stars package yet
+elev_resamp <- resample(elev, 
+                        mask.raster, 
+                        method = "bilinear")
+hum_acc_resamp <- resample(hum_acc, 
+                           mask.raster, 
+                           method = "bilinear")
+high_acc_resamp <- resample(high_acc, 
+                            mask.raster, 
+                            method = "bilinear")
 ```
 
 How can we zoom into just one area of a raster object? There are many
@@ -497,8 +555,31 @@ does not play well with .md files - try evaluating within your own
 project
 
 ``` r
-library(mapview)
-mapview(wolfyht) + deer_w + sheep_w
+# Not working here
+# library(mapview)
+# mapview(wolfyht) + deer_w + sheep_w
+
+# Tmap method -- can be faster 
+tmap_mode("view")
+
+# Brought into one step but can be seperated out (see below this map script)
+wolf_map <- tm_shape(wolfyht) +
+  tm_dots() + 
+  tm_shape(deer_w) +
+  tm_raster() + 
+  tm_shape(sheep_w) +
+  tm_raster()
+wolf_map
+
+## As multi-step:
+# wolf_map <- tm_shape(wolfyht) +
+#   tm_dots()
+# deer_layer <- wolf_map + 
+#   tm_shape(deer_w) +
+#   tm_raster()
+# deer_layer + 
+#   tm_shape(sheep_w) +
+#   tm_raster()
 ```
 
 ## Part 1b - Distance to Raster (Human Access Layer)
@@ -512,22 +593,23 @@ covariate for wildlife.
 
 For now, I already created this raster layer because it took a LONG time
 on a desktop. So this might be an example where using ArcGIS might save
-time.But I include the code for illustration.
+time. But I include the code for illustration.
 
 ``` r
-#first create an empty raster
-dist.raster <- rast()
-#set extent 
-ext(dist.raster) <- ext(humanaccess)
-
-#set the resolution to 30 m (Note that this takes a very long time with a 30 m resolution-even on my machine)
-res(dist.raster)<-30
-
-#match projection to humanaccess shapefile
-crs(dist.raster)<- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
-
-#set all values of dist.raster to zero
-dist.raster[]<-0
+## Don't need this, can just use the mask raster that was created earlier
+# #first create an empty raster
+# dist.raster <- rast()
+# #set extent 
+# ext(dist.raster) <- ext(hum_acc)
+# 
+# #set the resolution to 30 m (Note that this takes a very long time with a 30 m resolution-even on my machine)
+# res(dist.raster)<-300
+# 
+# #match projection to humanaccess shapefile
+# crs(dist.raster)<- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+# 
+# #set all values of dist.raster to zero
+# dist.raster[]<-0
 ```
 
 Next, we need to ’rasterize\` the new human access layer, and set human
@@ -535,25 +617,15 @@ features to 1 using the dist.raster feature within rasterize. Note
 again, for time we will not actually run these today.
 
 ``` r
-human.raster<-terra::rasterize(humanaccess, dist.raster, 1)
-
-#calculate distance to human access- NOTE : DO NOT RUN THIS IT TAKES FOREVER; I ENDED UP DOING THIS CALCULATION JUST FOR THE POINTS
-accessdist <-system.time(distance(human.raster))
-```
-
-Lets bring in the previously modeled distance to human layer.
-
-``` r
-#using terra
-disthumanaccess2<-rast(here::here("Data","DistFromHumanAccess2.tif")) 
-plot(disthumanaccess2)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
-
-``` r
-#using stars
-disthumanaccess2_stars <- read_stars(here::here("Data","DistFromHumanAccess2.tif"))
+# This would be how to create the human access raster file but we already have it
+# # Can't rasterize a raster, need the shape file
+# hum_acc_shp <- st_read(here("Data", "humanacess.shp"))
+# hum_rast <- rasterize(hum_acc_shp, 
+#                       mask.raster, 
+#                       1)
+# 
+# # Calculate distance to human access - NOTE : DO NOT RUN THIS IT TAKES FOREVER; I ENDED UP DOING THIS CALCULATION JUST FOR THE POINTS
+# accessdist <-system.time(distance(hum_rast))
 ```
 
 ## Advanced question: how would you calculate distance to high human use?
@@ -564,62 +636,39 @@ this field, and create a new shapefile. We could then use the steps
 above to rasterize this shapefile.
 
 ``` r
-#first reclassify labels on humanaccess.shp file so they are correct (note: need to bring in humanaccess.shp above)
-levels(as.factor(humanaccess$SUM_CLASS))
+# # How to make the high human access layer but we already have it so commented out
+# # First reclassify labels on humanaccess.shp file so they are correct (note: need to bring in humanaccess.shp above)
+# levels(as.factor(hum_acc_shp$SUM_CLASS))
+# #[1] "0"         "High"      "HIGH"      "Low"       "LOW"      
+# #[6] "MEDIUM"    "Moderate"  "Nil"       "NIL"       "VERY HIGH"
+# #convert hum_acc_shp$SUM_CLASS to a factor
+# hum_acc_shp$SUM_CLASS<-as.factor(hum_acc_shp$SUM_CLASS)
+# 
+# levels(hum_acc_shp$SUM_CLASS)[1]<-"NIL"
+# levels(hum_acc_shp$SUM_CLASS)[2]<-"HIGH"
+# levels(hum_acc_shp$SUM_CLASS)[3]<-"LOW"
+# levels(hum_acc_shp$SUM_CLASS)[5]<-"MODERATE"
+# levels(hum_acc_shp$SUM_CLASS)[6]<-"NIL"
+# 
+# #create indicator variable for high or not high human access
+# highaccess<-hum_acc_shp[hum_acc_shp$SUM_CLASS=="HIGH" | hum_acc_shp$SUM_CLASS=="VERY HIGH", ]
+# 
+# #use package tmap() to create simple plots
+# hum_acc_shp_plot <- tm_shape(hum_acc_shp)+tm_sf()
+# hum_acc_shp_plot + tm_shape(highaccess) + tm_sf(col = "red") 
 ```
 
-    ##  [1] "0"         "High"      "HIGH"      "Low"       "LOW"       "MEDIUM"   
-    ##  [7] "Moderate"  "Nil"       "NIL"       "VERY HIGH"
-
-``` r
-#[1] "0"         "High"      "HIGH"      "Low"       "LOW"      
-#[6] "MEDIUM"    "Moderate"  "Nil"       "NIL"       "VERY HIGH"
-#convert humanaccess$SUM_CLASS to a factor
-humanaccess$SUM_CLASS<-as.factor(humanaccess$SUM_CLASS)
-
-levels(humanaccess$SUM_CLASS)[1]<-"NIL"
-levels(humanaccess$SUM_CLASS)[2]<-"HIGH"
-levels(humanaccess$SUM_CLASS)[3]<-"LOW"
-levels(humanaccess$SUM_CLASS)[5]<-"MODERATE"
-levels(humanaccess$SUM_CLASS)[6]<-"NIL"
-
-#create indicator variable for high or not high human access
-highaccess<-humanaccess[humanaccess$SUM_CLASS=="HIGH" | humanaccess$SUM_CLASS=="VERY HIGH", ]
-
-#use package tmap() to create simple plots
-humanaccess_plot <- tm_shape(humanaccess)+tm_sf()
-humanaccess_plot + tm_shape(highaccess) + tm_sf(col = "red") 
-```
-
-    ## Warning: The shape highaccess contains empty units.
-
-![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- --> Now you
-would go through and rasterize this following the steps above to make
-this a raster file. Note I already did this to save time - lets load the
-distance to high human access layer.
-
-``` r
-#Reading in and plotting with terra
-disthighhumanaccess<-rast(here::here("Data","DistFromHighHumanAccess2.tif"))
-plot(disthighhumanaccess)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
-
-``` r
-#reading in with stars
-disthighhumanacess_stars <- read_stars(here::here("Data","DistFromHighHumanAccess2.tif"))
-```
-
-- Break Out Discussion \*
+Now you would go through and rasterize this following the steps above to
+make this a raster file. Note I already did this with the distance to
+high human access layer.
 
 # Objective 2 - Home Range Analysis
 
 Note I’ve done these here for the individual level I added the
 pack-level analysis below. But our goal will be to calculate 99% minimum
 convex polygon for individual wolves in the Red Deer wolf pack. Our
-first step is to convert the SpatialPointsDataFrame to spatial points
-object.
+first step is to change the wolfyht `sf` data.frame to a
+adehabitat::spatial points object.
 
 For these steps of estimating home ranges, we will be using the
 adehabitat set of packages created by Clement Calenge that are EXTREMELY
@@ -643,17 +692,23 @@ creating a new spatialPointsDataFrame from say, an excel spreadsheet or
 data from GPS radiocollars.
 
 ``` r
-rd.data<-wolfyht[wolfyht$Pack=="Red Deer",]
-x<-rd.data$EASTING
-y<-rd.data$NORTHING
-xy<-cbind(x,y)
+# Pull out just Red Deer Pack data
+rd.data <- wolfyht[wolfyht$Pack == "Red Deer", ]
+
+# Setup a matrix of the coordinates
+x <- rd.data$EASTING
+y <- rd.data$NORTHING
+xy <- cbind(x, y)
 class(xy)
 ```
 
     ## [1] "matrix" "array"
 
 ``` r
+# Setup a data.frame that is just the wolf IDs
 rd <- data.frame(as.character(rd.data$NAME))
+
+# Add coordinates to that and set a crs
 coordinates(rd) <- xy
 crs(rd) <-  "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
@@ -665,9 +720,10 @@ class(rd)
     ## [1] "sp"
 
 ``` r
-# Fit 99% mpc
-#cp.rd <- mcp(rd, percent=99)
-#note error that one animal does not have at least 5 locations
+## Fit 99% mpc, running this will throw an error because each individual is required to have at least 5 locations and some of these individuals do not
+# cp.rd <- mcp(rd, percent=99)
+
+# Look at a matrix of the different names and how many locations each has
 table(rd.data$NAME)
 ```
 
@@ -676,15 +732,19 @@ table(rd.data$NAME)
     ## 43 25  4 15  3  2  1
 
 ``` r
-#42 60 69 70 81 82 84 
-#43 25  4 15  3  2  1  
-#looks like 4 of the wolves do not have enough locations
+# Looks like 4 of the wolves do not have enough locations
 
-#remove these individuals with too few of locations
-names(rd)<-"NAME"
-rd<-rd[rd@data$NAME!="69" & rd@data$NAME!="81" & rd@data$NAME!="82" & rd@data$NAME!="84",]
-#remove unused NAME levels
-rd@data$NAME<-factor(rd@data$NAME)
+# Remove these individuals with too few of locations
+# First set the column name to be more intuitive
+names(rd) <- "NAME"
+rd_trunc <- rd[rd@data$NAME != "69" 
+               & rd@data$NAME != "81"
+               & rd@data$NAME != "82" 
+               & rd@data$NAME != "84",]
+
+# # Unnecessary, NAME is not a factor
+# # Remove unused NAME levels
+# rd_trunc@data$NAME <- factor(rd@data$NAME)
 ```
 
 Next we will fit a 99% Minimum Convex Polygon to these cleaned data for
@@ -692,19 +752,28 @@ EACH individual wolf.
 
 ``` r
 # Fit 99% mcp
-cp.rd <- mcp(rd, percent=99)
-plot(rd, col="black")
-plot(cp.rd[cp.rd@data$id=="42",], col="blue", add=TRUE)
-plot(cp.rd[cp.rd@data$id=="70",], col="green", add=TRUE)
-plot(cp.rd[cp.rd@data$id=="60",], col="red", add=TRUE)
-plot(rd, col="black", add=TRUE)
+mcp.rd <- mcp(rd_trunc, percent = 99)
+plot(rd_trunc, 
+     col = "black")
+plot(mcp.rd[mcp.rd@data$id == "42",], 
+     col = "blue", 
+     add = TRUE)
+plot(mcp.rd[mcp.rd@data$id == "70",], 
+     col = "green", 
+     add = TRUE)
+plot(mcp.rd[mcp.rd@data$id == "60",], 
+     col = "red", 
+     add = TRUE)
+plot(rd_trunc,
+     col = "black",
+     add = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+![](README_files/figure-gfm/fit%20MCP-1.png)<!-- -->
 
 ``` r
-#check area in square meters for each Red Deer wolf pack
-as.data.frame(cp.rd)
+# Check area in square meters for each Red Deer wolf pack
+as.data.frame(mcp.rd)
 ```
 
     ##    id     area
@@ -713,11 +782,11 @@ as.data.frame(cp.rd)
     ## 70 70 81438.04
 
 ``` r
-#calculate area for different percents of MPC in square meters. 
-mcp.area(rd, percent=seq(50, 100, by=5))
+# Calculate area for different percents of MPC in square meters. 
+mcp.area(rd_trunc, percent = seq(50, 100, by = 5))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-19-2.png)<!-- -->
+![](README_files/figure-gfm/fit%20MCP-2.png)<!-- -->
 
     ##            42       60        70
     ## 50   15969.17 22253.10  13110.79
@@ -736,15 +805,15 @@ We will now estimate Kernel Density Estimate home ranges using the
 command `kernelUD()`.
 
 ``` r
-#calculate 99% KDE for Red Deer wolf pack
-red.deerUD <- kernelUD(rd, grid=30, extent=0.5, same4all=TRUE) # reference grid
+# Calculate 99% KDE for Red Deer wolf pack
+red.deerUD <- kernelUD(rd_trunc, grid = 30, extent = 0.5, same4all = TRUE) # reference grid
 image(red.deerUD)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](README_files/figure-gfm/kernal%20HRs-1.png)<!-- -->
 
 ``` r
-#get polygons for home ranges
+# Get polygons for home ranges
 homerangeRD <- getverticeshr(red.deerUD)
 as.data.frame(homerangeRD)
 ```
@@ -763,15 +832,15 @@ class(homerangeRD)
     ## [1] "sp"
 
 ``` r
-plot(homerangeRD, col=2:4)
+plot(homerangeRD, col = 2:4)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-20-2.png)<!-- -->
+![](README_files/figure-gfm/kernal%20HRs-2.png)<!-- -->
 
 ``` r
-#Estimate UD in raster mode
-red.deerud <- getvolumeUD(red.deerUD) 
-red.deerud
+# Estimate UD in raster mode
+red.deerUD.vol <- getvolumeUD(red.deerUD) 
+red.deerUD.vol
 ```
 
     ## ********** Utilization distribution of several Animals ************
@@ -783,37 +852,42 @@ red.deerud
     ## See estUD-class for more information
 
 ``` r
-## Set up graphical parameters for the output of getvolumeUD 
-par(mar=c(0,0,2,0)) #set margin
-image(red.deerud[[1]]) #for first wolf only
+##Set up graphical parameters for the output of getvolumeUD 
+par(mar = c(0, 0, 2, 0)) # Set margin
+image(red.deerUD.vol[[1]]) # For first wolf only
 title("Red Deer Wolf UD") 
-xyzv <- as.image.SpatialGridDataFrame(red.deerud[[1]]) 
-contour(xyzv, add=TRUE)
+xyzv <- as.image.SpatialGridDataFrame(red.deerUD.vol[[1]]) 
+contour(xyzv, add = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-20-3.png)<!-- -->
+![](README_files/figure-gfm/kernal%20HRs-3.png)<!-- -->
 
 Next we will store the volume under the UD (as computed by getvolumeUD)
-of the first animal in fud as a RASTER file of 1= home range, 0 = not
+of the first animal in rd1_ud as a RASTER file of 1= home range, 0 = not
 home range.
 
 ``` r
-fud <- red.deerud[[1]] #for first wolf only
-## store the value of the volume under UD in a vector hr95 
-hr95 <- as.data.frame(fud)[,1] 
-## if hr95 is <= 95 then the pixel belongs to the home range
-## (takes the value 1, 0 otherwise)
-hr95 <- as.numeric(hr95 <= 95) 
-## Converts into a data frame 
-hr95 <- data.frame(hr95) 
-## Converts to a SpatialPixelsDataFrame 
-coordinates(hr95) <- coordinates(red.deerud[[1]])
-gridded(hr95) <- TRUE 
-## display the results 
-image(hr95)
+# Pull out the UD volume for just the first wolf
+rd1_ud <- red.deerUD.vol[[1]] 
+
+# Store the value of the volume under UD in a vector  
+rd1_hr95 <- as.data.frame(rd1_ud)[,1] 
+
+# If hr95 is <= 95 then the pixel belongs to the home range (takes the value 1, 0 otherwise)
+rd1_hr95_bi <- as.numeric(rd1_hr95 <= 95) 
+
+# Converts into a data frame 
+rd1_hr95_bi <- data.frame(rd1_hr95_bi) 
+
+# Converts to a SpatialPixelsDataFrame 
+coordinates(rd1_hr95_bi) <- coordinates(red.deerUD.vol[[1]])
+gridded(rd1_hr95_bi) <- TRUE 
+
+# Display the results 
+image(rd1_hr95_bi)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](README_files/figure-gfm/store%20UD%20volume-1.png)<!-- -->
 
 ## Bow Valley wolves
 
@@ -821,32 +895,51 @@ Calculate 99% minimum convex polygon for individual wolves in Bow valley
 wolf pack repeating the same steps as above.
 
 ``` r
-#first convert the spatialpointsdataframe to spatial points object
-bv.data<-wolfyht[wolfyht$Pack=="Bow valley",]
-x<-bv.data$EASTING
-y<-bv.data$NORTHING
-xy<-cbind(x,y)
+# Pull out just Bow Valley Pack data
+bv.data <- wolfyht[wolfyht$Pack == "Bow valley", ]
 
+# Setup a matrix of the coordinates
+x <- bv.data$EASTING
+y <- bv.data$NORTHING
+xy <- cbind(x, y)
+class(xy)
+```
+
+    ## [1] "matrix" "array"
+
+``` r
+# Setup a data.frame that is just the wolf IDs
 bv <- data.frame(as.character(bv.data$NAME))
+
+# Add coordinates to that and set a crs
 coordinates(bv) <- xy
 crs(bv) <-  "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
-# Fit 99% mpc
-cp.bow <- mcp(bv, percent=99)
-plot(bv, col="black")
-plot(cp.bow[cp.bow@data$id=="63",], col="blue",add=TRUE)
-plot(cp.bow[cp.bow@data$id=="87",], col="red",add=TRUE,)
-plot(cp.bow[cp.bow@data$id=="44",], col="green",add=TRUE)
-plot(bv, col="black", add=TRUE)
+# Fit 99% mcp
+mcp.bv <- mcp(bv, percent = 99)
+plot(bv, 
+     col = "black")
+plot(mcp.bv[mcp.bv@data$id == "63",], 
+     col = "blue", 
+     add = TRUE)
+plot(mcp.bv[mcp.bv@data$id == "87",], 
+     col = "green", 
+     add = TRUE)
+plot(mcp.bv[mcp.bv@data$id == "44",], 
+     col = "red", 
+     add = TRUE)
+plot(bv,
+     col = "black",
+     add = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
 ## Red Deer wolves
 
 ``` r
-#check area for each Red Deer wolf pack
-as.data.frame(cp.bow)
+# Check area in square meters for each Bow Valley wolf pack
+as.data.frame(mcp.bv)
 ```
 
     ##    id     area
@@ -855,11 +948,11 @@ as.data.frame(cp.bow)
     ## 87 87 11878.75
 
 ``` r
-#calculate area for different percents of MPC
-mcp.area(bv, percent=seq(50, 100, by=5))
+# Calculate area for different percents of MPC in square meters. 
+mcp.area(bv, percent = seq(50, 100, by = 5))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
     ##            44        63       87
     ## 50   1645.560  2385.395  1105.98
@@ -875,16 +968,37 @@ mcp.area(bv, percent=seq(50, 100, by=5))
     ## 100 15108.718 34863.728 12531.75
 
 ``` r
-#calculate 99% KDE for Red Deer wolf pack
-bow.valleyUD <- kernelUD(bv, grid=30, extent=0.1, same4all=TRUE) # reference grid
+# Calculate 99% KDE for Bow Valley wolf pack
+bow.valleyUD <- kernelUD(bv, grid = 30, extent = 0.1, same4all = TRUE) # reference grid
 image(bow.valleyUD)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-23-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-3-2.png)<!-- -->
 
 ``` r
-#get polygons for home ranges
+# Get polygons for home ranges
 homerangeBV <- getverticeshr(bow.valleyUD)
+```
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+``` r
 as.data.frame(homerangeBV)
 ```
 
@@ -902,15 +1016,27 @@ class(homerangeBV)
     ## [1] "sp"
 
 ``` r
-plot(homerangeBV, col=2:4)
+plot(homerangeBV, col = 2:4)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
 ``` r
 #Estimate UD in raster mode
-bow.valleyud <- getvolumeUD(bow.valleyUD) 
-bow.valleyud
+bow.valleyUD.vol <- getvolumeUD(bow.valleyUD) 
+```
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+``` r
+bow.valleyUD.vol
 ```
 
     ## ********** Utilization distribution of several Animals ************
@@ -923,64 +1049,75 @@ bow.valleyud
 
 ``` r
 ## Set up graphical parameters for the output of getvolumeUD 
-par(mar=c(0,0,2,0)) #set margin
-image(bow.valleyud[[1]])
+par(mar = c(0, 0, 2, 0)) #set margin
+image(bow.valleyUD.vol[[1]])
 title("Bow Valley Pack UD") 
-xyzv <- as.image.SpatialGridDataFrame(bow.valleyud[[1]]) 
-contour(xyzv, add=TRUE)
+xyzv <- as.image.SpatialGridDataFrame(bow.valleyUD.vol[[1]]) 
+contour(xyzv, add = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-24-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-4-2.png)<!-- -->
 
 Store the volume under the UD (as computed by getvolumeUD) of the first
-animal in fud.
+animal in bv1_ud.
 
 ``` r
-fud <- bow.valleyud[[1]]
-## store the value of the volume under 95% UD in a vector hr95 
-hr95 <- as.data.frame(fud)[,1] 
-## if hr95 is <= 95 then the pixel belongs to the home range
-## (takes the value 1, 0 otherwise)
-hr95 <- as.numeric(hr95 <= 95) 
-## Converts into a data frame 
-hr95 <- data.frame(hr95) 
-## Converts to a SpatialPixelsDataFrame 
-coordinates(hr95) <- coordinates(bow.valleyud[[1]])
-gridded(hr95) <- TRUE 
-## display the results 
-image(hr95)
+# Extract just the first Bow Valley wolf
+bv1_ud <- bow.valleyUD.vol[[1]]
+
+# Store the value of the volume under 95% UD in a vector hr95 
+bv1_hr95 <- as.data.frame(bv1_ud)[,1] 
+
+# If hr95 is <= 95 then the pixel belongs to the home range (takes the value 1, 0 otherwise)
+bv1_hr95_bi <- as.numeric(bv1_hr95 <= 95) 
+
+# Converts into a data frame 
+bv1_hr95_bi <- data.frame(bv1_hr95_bi) 
+
+# Converts to a SpatialPixelsDataFrame 
+coordinates(bv1_hr95_bi) <- coordinates(bow.valleyUD.vol[[1]])
+gridded(bv1_hr95_bi) <- TRUE 
+
+# Display the results 
+image(bv1_hr95_bi)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ## Calculate 99% minimum convex polygon for both wolf packs
 
 ``` r
-#first convert the spatialpointsdataframe to spatial points object
-x<-wolfyht$EASTING
-y<-wolfyht$NORTHING
-xy<-cbind(x,y)
+# First convert the spatialpointsdataframe to spatial points object
+x <- wolfyht$EASTING
+y <- wolfyht$NORTHING
+xy <- cbind(x,y)
 
 all <- data.frame(as.character(wolfyht$Pack))
 coordinates(all) <- xy
 crs(all) <-  "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
-# Fit 99% mpc
-cp.all <- mcp(all, percent=99)
+# Fit 99% MCP
+mcp.all <- mcp(all, percent = 99)
 
-plot(all, col="black")
-plot(cp.all[cp.all@data$id=="Bow valley",], col="blue",add=TRUE)
-plot(cp.all[cp.all@data$id=="Red Deer",], col="green",add=TRUE)
-plot(wolfyht, col="black", add=TRUE)
+plot(all, col = "black")
+plot(mcp.all[mcp.all@data$id == "Bow valley",], 
+     col = "blue",
+     add = TRUE)
+plot(mcp.all[mcp.all@data$id == "Red Deer",], 
+     col = "green",
+     add = TRUE)
+plot(wolfyht, 
+     col = "black",
+     add = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 Checking areas, etc
 
 ``` r
-#check area for each Red Deer wolf pack
-as.data.frame(cp.all)
+# Check area for each wolf pack
+as.data.frame(mcp.all)
 ```
 
     ##                    id      area
@@ -988,11 +1125,44 @@ as.data.frame(cp.all)
     ## Red Deer     Red Deer 137343.40
 
 ``` r
-#calculate area for different percents of MPC
-mcp.area(all, percent=seq(50, 100, by=5))
+# Calculate area for different percents of MPC
+mcp.area(all, percent = seq(50, 100, by = 5))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
     ##     Bow valley  Red Deer
     ## 50    2561.216  20914.49
@@ -1008,17 +1178,44 @@ mcp.area(all, percent=seq(50, 100, by=5))
     ## 100  38557.463 137343.40
 
 ``` r
-#calculate 99% KDE for both wolf packs
-allUD <- kernelUD(all, grid=30, extent=0.5, same4all=TRUE) # reference grid
+# Calculate 99% KDE for both wolf packs
+allUD <- kernelUD(all, grid = 30, extent = 0.5, same4all = TRUE) # reference grid
+```
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(xy): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+``` r
 image(allUD)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-27-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
 
 Get polygons for home ranges
 
 ``` r
 homerangeALL <- getverticeshr(allUD)
+```
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+``` r
 as.data.frame(homerangeALL)
 ```
 
@@ -1035,16 +1232,25 @@ class(homerangeALL)
     ## [1] "sp"
 
 ``` r
-plot(homerangeALL, col=2:3)
+plot(homerangeALL, col = 2:3)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 Estimate UD in raster mode
 
 ``` r
-allud <- getvolumeUD(allUD) 
-allud
+allUD.vol <- getvolumeUD(allUD) 
+```
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+    ## Warning in proj4string(x): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+``` r
+allUD.vol
 ```
 
     ## ********** Utilization distribution of several Animals ************
@@ -1057,35 +1263,37 @@ allud
 
 ``` r
 ## Set up graphical parameters for the output of getvolumeUD 
-par(mar=c(0,0,2,0)) #set margin
-image(allud[[1]]) #for first wolf only
+par(mar = c(0, 0, 2, 0)) #set margin
+image(allUD.vol[[1]]) #for first wolf only
 title("Output of getvolumeUD") 
-xyzv <- as.image.SpatialGridDataFrame(allud[[1]]) 
-contour(xyzv, add=TRUE)
+xyzv <- as.image.SpatialGridDataFrame(allUD.vol[[1]]) 
+contour(xyzv, add = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 Store the volume under the UD (as computed by getvolumeUD) of the first
-animal in fud
+pack in pack1_ud
 
 ``` r
-fud <- allud[[1]] #for first wolf pack only
-## store the value of the volume under UD in a vector hr95 
-hr95 <- as.data.frame(fud)[,1] 
-## if hr95 is <= 95 then the pixel belongs to the home range
-## (takes the value 1, 0 otherwise)
-hr95 <- as.numeric(hr95 <= 95) 
-## Converts into a data frame 
-hr95 <- data.frame(hr95) 
-## Converts to a SpatialPixelsDataFrame 
-coordinates(hr95) <- coordinates(allud[[1]])
-gridded(hr95) <- TRUE 
-## display the results 
-image(hr95)
+# Extract just the first wolf pack
+pack1_ud <- allUD.vol[[1]] 
+
+# Store the value of the volume under UD in a vector hr95 
+pack1_hr95 <- as.data.frame(pack1_ud)[,1] 
+
+# If hr95 is <= 95 then the pixel belongs to the home range (takes the value 1, 0 otherwise)
+pack1_hr95_bi <- as.numeric(pack1_hr95 <= 95) 
+# Converts into a data frame 
+pack1_hr95_bi <- data.frame(pack1_hr95_bi) 
+# Converts to a SpatialPixelsDataFrame 
+coordinates(pack1_hr95_bi) <- coordinates(allUD.vol[[1]])
+gridded(pack1_hr95_bi) <- TRUE 
+# Display the results 
+image(pack1_hr95_bi)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 # Objective 3 - Sampling Availability Within Home Ranges
 
@@ -1104,35 +1312,57 @@ sample. One way to do this is ensure that no randomly generated points
 are within 30m of each other.
 
 ``` r
-#subset polygons by wolf pack
-red.deerPOLY<-homerangeALL[homerangeALL@data$id=="Red Deer",]
-bow.valleyPOLY<-homerangeALL[homerangeALL@data$id=="Bow valley",]
+# Subset polygons by wolf pack
+red.deerPOLY <- homerangeALL[homerangeALL@data$id == "Red Deer", ]
+bow.valleyPOLY <- homerangeALL[homerangeALL@data$id == "Bow valley", ]
 
-#generate 1000 points from Red Deer wolf pack KDE polygon
-rd.avail<-spsample(red.deerPOLY, 1000, "random")
+# Generate 1000 points from Red Deer wolf pack KDE polygon
+rd.avail <- spsample(red.deerPOLY, 1000, "random")
+```
+
+    ## Warning in proj4string(obj): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+``` r
 plot(rd.avail)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ``` r
-#generate 1000 points from Bow valley wolf pack KDE polygon
-bv.avail<-spsample(bow.valleyPOLY, 1000, "random")
+# Generate 1000 points from Bow valley wolf pack KDE polygon
+bv.avail <- spsample(bow.valleyPOLY, 1000, "random")
+```
+
+    ## Warning in proj4string(obj): CRS object has comment, which is lost in output; in tests, see
+    ## https://cran.r-project.org/web/packages/sp/vignettes/CRS_warnings.html
+
+``` r
 plot(bv.avail)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-31-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
 
-Lets plot them all together, used and home-range level availability.
+# `sp` way to sample was spsample, which is in adehabitat?? but new way might be st_sampl(x, etc..) - very similar.
+
+Let’s plot them all together, used and home-range level availability.
 
 ``` r
-plot(wolfyht$EASTING,wolfyht$NORTHING, col=c("red","blue")[wolfyht$PackID],ylab="Northing",xlab="Easting")
-legend(555000,5742500,unique(wolfyht$Pack),col=c("blue","red"),pch=1)
-plot(bv.avail, add=TRUE)
-plot(rd.avail, add=TRUE)
+plot(wolfyht$EASTING,
+     wolfyht$NORTHING, 
+     col = c("red", "blue")[wolfyht$PackID],
+     ylab = "Northing",
+     xlab = "Easting")
+legend(555000,
+       5742500,
+       unique(wolfyht$Pack),
+       col = c("blue", "red"),
+       pch = 1)
+plot(bv.avail, add = TRUE)
+plot(rd.avail, add = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 **Discuss in class: assumptions of sampling availability this way?
 Spatial scale of this sampling design?**
@@ -1162,11 +1392,25 @@ tidyverse, which depends on tidyr, but I’ve loaded it separately later
 in summary statistics below.
 
 ``` r
-#with terra
-all_rasters<-c(deer_w, moose_w, elk_w, sheep_w, goat_w, wolf_w,elevation2, disthumanaccess2, disthighhumanaccess)
+# With terra
+# First re-sampling so that extents match
+hum_acc_deersamp <- resample(hum_acc, deer_w)
+highacc_deersamp <- resample(high_acc, deer_w)
 
-#with stars
-#all_rasters_stars<-c(deer_w_stars, moose_w_stars, elk_w_stars, sheep_w_stars, goat_w_stars, wolf_w_stars,elevation2_stars, disthumanaccess2_stars, disthighhumanacess_stars)
+#stacking rasters
+all_rasters<-c(deer_w, 
+               moose_w,
+               elk_w,
+               sheep_w, 
+               goat_w, 
+               wolf_w, 
+               elev_resamp, 
+               hum_acc_deersamp, 
+               highacc_deersamp)
+
+# # With stars
+# These layers weren't made
+# all_rasters_stars <- c(deer_w_stars, moose_w_stars, elk_w_stars, sheep_w_stars, goat_w_stars, wolf_w_stars,elevation2_stars, disthumanaccess2_stars, disthighhumanacess_stars)
 
 class(all_rasters)
 ```
@@ -1176,25 +1420,25 @@ class(all_rasters)
     ## [1] "terra"
 
 ``` r
-#Extract covariate values for Red Deer wolf data  
-cov.outRD<-extract(all_rasters, rd.data)
+# Extract covariate values for Red Deer wolf data  
+cov.outRD <- extract(all_rasters, rd.data)
 head(cov.outRD)
 ```
 
     ##   ID DEER_W MOOSE_W ELK_W SHEEP_W GOAT_W WOLF_W Elevation2 DistFromHumanAccess2
-    ## 1  1      4       5     5       3      3      5   1766.146            427.39618
-    ## 2  2      4       4     4       1      3      4   1788.780            360.50430
-    ## 3  3      4       5     5       4      1      5   1765.100            283.66480
-    ## 4  4      4       5     5       4      1      5   1742.913            167.41344
-    ## 5  5     NA      NA    NA      NA     NA     NA   1987.394             27.90951
-    ## 6  6      1       1     1       1      4      1   1778.360            622.62573
+    ## 1  1      4       5     5       3      3      5   1763.845             292.6802
+    ## 2  2      4       4     4       1      3      4   1792.573             336.8933
+    ## 3  3      4       5     5       4      1      5   1768.839             275.2383
+    ## 4  4      4       5     5       4      1      5   1742.120             210.1822
+    ## 5  5    NaN     NaN   NaN     NaN    NaN    NaN   2007.832             132.1635
+    ## 6  6      1       1     1       1      4      1   1829.139             639.7680
     ##   DistFromHighHumanAccess2
-    ## 1                9367.8168
-    ## 2               10398.5999
-    ## 3               10296.5167
-    ## 4                6347.8193
-    ## 5                8853.8623
-    ## 6                 723.7941
+    ## 1                9368.9736
+    ## 2               10400.4785
+    ## 3               10297.5732
+    ## 4                6352.2402
+    ## 5                8855.0029
+    ## 6                 748.4644
 
 ``` r
 #Extract covariate values for available points
@@ -1222,25 +1466,28 @@ and add a new column for pack name.
 rdused <- cov.outRD
 rdused$pack <- c("Red Deer")
 
-## repeat for Bow Valley pack
+# Repeat for Bow Valley pack
 bvused <- cov.outBV
 bvused$pack <- c("Bow Valley")
 
-wolfused <- merge(rdused, bvused, all.x= TRUE, all.y = TRUE)
+wolfused <- merge(rdused, 
+                  bvused, 
+                  all.x = TRUE,
+                  all.y = TRUE)
 str(wolfused)
 ```
 
     ## 'data.frame':    413 obs. of  11 variables:
     ##  $ ID                      : num  1 1 2 2 3 3 4 4 5 5 ...
-    ##  $ DEER_W                  : num  4 5 4 4 4 5 4 5 4 NA ...
-    ##  $ MOOSE_W                 : num  5 5 4 4 5 3 5 5 5 NA ...
-    ##  $ ELK_W                   : num  5 5 4 5 5 5 5 5 4 NA ...
-    ##  $ SHEEP_W                 : num  3 3 1 3 4 1 4 3 3 NA ...
-    ##  $ GOAT_W                  : num  3 1 3 1 1 1 1 1 1 NA ...
-    ##  $ WOLF_W                  : num  5 5 4 5 5 5 5 5 4 NA ...
-    ##  $ Elevation2              : num  1766 1402 1789 1497 1765 ...
-    ##  $ DistFromHumanAccess2    : num  427 294 361 465 284 ...
-    ##  $ DistFromHighHumanAccess2: num  9368 371 10399 228 10297 ...
+    ##  $ DEER_W                  : num  4 5 4 4 4 5 4 5 4 NaN ...
+    ##  $ MOOSE_W                 : num  5 5 4 4 5 3 5 5 5 NaN ...
+    ##  $ ELK_W                   : num  5 5 4 5 5 5 5 5 4 NaN ...
+    ##  $ SHEEP_W                 : num  3 3 1 3 4 1 4 3 3 NaN ...
+    ##  $ GOAT_W                  : num  3 1 3 1 1 1 1 1 1 NaN ...
+    ##  $ WOLF_W                  : num  5 5 4 5 5 5 5 5 4 NaN ...
+    ##  $ Elevation2              : num  1764 1403 1793 1507 1769 ...
+    ##  $ DistFromHumanAccess2    : num  293 312 337 465 275 ...
+    ##  $ DistFromHighHumanAccess2: num  9369 311 10400 253 10298 ...
     ##  $ pack                    : chr  "Red Deer" "Bow Valley" "Red Deer" "Bow Valley" ...
 
 ``` r
@@ -1248,22 +1495,22 @@ head(wolfused)
 ```
 
     ##   ID DEER_W MOOSE_W ELK_W SHEEP_W GOAT_W WOLF_W Elevation2 DistFromHumanAccess2
-    ## 1  1      4       5     5       3      3      5   1766.146             427.3962
-    ## 2  1      5       5     5       3      1      5   1402.000             293.7954
-    ## 3  2      4       4     4       1      3      4   1788.780             360.5043
-    ## 4  2      4       4     5       3      1      5   1496.907             464.8679
-    ## 5  3      4       5     5       4      1      5   1765.100             283.6648
-    ## 6  3      5       3     5       1      1      5   1402.000             131.8740
+    ## 1  1      4       5     5       3      3      5   1763.845             292.6802
+    ## 2  1      5       5     5       3      1      5   1402.500             312.0416
+    ## 3  2      4       4     4       1      3      4   1792.573             336.8933
+    ## 4  2      4       4     5       3      1      5   1507.411             464.5219
+    ## 5  3      4       5     5       4      1      5   1768.839             275.2383
+    ## 6  3      5       3     5       1      1      5   1404.888             147.4783
     ##   DistFromHighHumanAccess2       pack
-    ## 1                9367.8168   Red Deer
-    ## 2                 371.1612 Bow Valley
-    ## 3               10398.5999   Red Deer
-    ## 4                 228.2955 Bow Valley
-    ## 5               10296.5167   Red Deer
-    ## 6                 255.1532 Bow Valley
+    ## 1                9368.9736   Red Deer
+    ## 2                 310.8645 Bow Valley
+    ## 3               10400.4785   Red Deer
+    ## 4                 253.0944 Bow Valley
+    ## 5               10297.5732   Red Deer
+    ## 6                 228.1433 Bow Valley
 
 ``` r
-## and for next week, lets add a new column for a 1=used 0 = avail
+# And for next week, let's add a new column for a 1=used 0 = avail
 wolfused$used <- 1
 ```
 
@@ -1287,32 +1534,32 @@ summary(wolfused)
     ##                  NA's   :13      NA's   :13      NA's   :13     
     ##     SHEEP_W          GOAT_W          WOLF_W        Elevation2  
     ##  Min.   :1.000   Min.   :1.000   Min.   :1.000   Min.   :1402  
-    ##  1st Qu.:1.000   1st Qu.:1.000   1st Qu.:4.000   1st Qu.:1407  
-    ##  Median :3.000   Median :1.000   Median :5.000   Median :1441  
-    ##  Mean   :2.507   Mean   :1.748   Mean   :4.737   Mean   :1548  
-    ##  3rd Qu.:3.000   3rd Qu.:3.000   3rd Qu.:5.000   3rd Qu.:1602  
-    ##  Max.   :7.000   Max.   :7.000   Max.   :7.000   Max.   :2225  
+    ##  1st Qu.:1.000   1st Qu.:1.000   1st Qu.:4.000   1st Qu.:1412  
+    ##  Median :3.000   Median :1.000   Median :5.000   Median :1447  
+    ##  Mean   :2.507   Mean   :1.748   Mean   :4.737   Mean   :1552  
+    ##  3rd Qu.:3.000   3rd Qu.:3.000   3rd Qu.:5.000   3rd Qu.:1600  
+    ##  Max.   :7.000   Max.   :7.000   Max.   :7.000   Max.   :2236  
     ##  NA's   :13      NA's   :13      NA's   :13                    
     ##  DistFromHumanAccess2 DistFromHighHumanAccess2     pack                used  
-    ##  Min.   :   0.00      Min.   :    0.00         Length:413         Min.   :1  
-    ##  1st Qu.:  94.46      1st Qu.:   73.72         Class :character   1st Qu.:1  
-    ##  Median : 227.41      Median :  227.64         Mode  :character   Median :1  
-    ##  Mean   : 308.90      Mean   : 1205.01                            Mean   :1  
-    ##  3rd Qu.: 409.32      3rd Qu.:  482.47                            3rd Qu.:1  
-    ##  Max.   :2338.26      Max.   :11339.46                            Max.   :1  
+    ##  Min.   :  34.98      Min.   :    0.0          Length:413         Min.   :1  
+    ##  1st Qu.: 138.04      1st Qu.:  103.4          Class :character   1st Qu.:1  
+    ##  Median : 225.73      Median :  215.2          Mode  :character   Median :1  
+    ##  Mean   : 317.15      Mean   : 1209.7                             Mean   :1  
+    ##  3rd Qu.: 366.64      3rd Qu.:  450.6                             3rd Qu.:1  
+    ##  Max.   :2343.30      Max.   :11342.0                             Max.   :1  
     ##  NA's   :4            NA's   :4
 
 Note that there are 4 missing NA values in the distance to human access
 layer. Why?
 
 ``` r
-plot(disthumanaccess2)
+plot(hum_acc)
 plot(wolfyht, add = TRUE)
 ```
 
     ## Warning in plot.sf(wolfyht, add = TRUE): ignoring all but the first attribute
 
-![](README_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 This is a really common problem in combining raster layers of different
 sources, spatial extents, etc. Another common example we will see later
@@ -1321,7 +1568,7 @@ data in the distance to access variable. Missing data are a problem, we
 will replace NA’s with 0’s for now. Discuss in class.
 
 ``` r
-#Note, this replaces just NAs for just the wolf used locations with NA for distance to human access, but note there were 13 missing values, say, for some of the ELC H.S.I models. 
+# Note, this replaces just NAs for just the wolf used locations with NA for distance to human access, but note there were 13 missing values, say, for some of the ELC H.S.I models. 
 wolfused <- na.omit(wolfused)
 summary(wolfused)
 ```
@@ -1335,18 +1582,18 @@ summary(wolfused)
     ##  Max.   :320.00   Max.   :7.000   Max.   :7.000   Max.   :7.000  
     ##     SHEEP_W          GOAT_W          WOLF_W        Elevation2  
     ##  Min.   :1.000   Min.   :1.000   Min.   :1.000   Min.   :1402  
-    ##  1st Qu.:1.000   1st Qu.:1.000   1st Qu.:4.000   1st Qu.:1405  
-    ##  Median :3.000   Median :1.000   Median :5.000   Median :1438  
-    ##  Mean   :2.508   Mean   :1.745   Mean   :4.737   Mean   :1535  
+    ##  1st Qu.:1.000   1st Qu.:1.000   1st Qu.:4.000   1st Qu.:1411  
+    ##  Median :3.000   Median :1.000   Median :5.000   Median :1444  
+    ##  Mean   :2.508   Mean   :1.745   Mean   :4.737   Mean   :1539  
     ##  3rd Qu.:3.000   3rd Qu.:3.000   3rd Qu.:5.000   3rd Qu.:1569  
-    ##  Max.   :7.000   Max.   :7.000   Max.   :7.000   Max.   :2225  
+    ##  Max.   :7.000   Max.   :7.000   Max.   :7.000   Max.   :2236  
     ##  DistFromHumanAccess2 DistFromHighHumanAccess2     pack                used  
-    ##  Min.   :   0.00      Min.   :    0.00         Length:396         Min.   :1  
-    ##  1st Qu.:  99.94      1st Qu.:   64.22         Class :character   1st Qu.:1  
-    ##  Median : 232.71      Median :  218.43         Mode  :character   Median :1  
-    ##  Mean   : 304.65      Mean   : 1082.69                            Mean   :1  
-    ##  3rd Qu.: 411.73      3rd Qu.:  450.82                            3rd Qu.:1  
-    ##  Max.   :2105.20      Max.   :11300.85                            Max.   :1
+    ##  Min.   :  34.98      Min.   :    0.0          Length:396         Min.   :1  
+    ##  1st Qu.: 139.25      1st Qu.:  100.0          Class :character   1st Qu.:1  
+    ##  Median : 231.05      Median :  208.7          Mode  :character   Median :1  
+    ##  Mean   : 311.92      Mean   : 1087.3                             Mean   :1  
+    ##  3rd Qu.: 374.40      3rd Qu.:  427.0                             3rd Qu.:1  
+    ##  Max.   :2109.08      Max.   :11301.7                             Max.   :1
 
 ``` r
 dim(wolfused)
@@ -1367,7 +1614,7 @@ hist(wolfused$SHEEP_W)
 hist(wolfused$GOAT_W)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 Continuous covariates next, elevation (m), distance (m).
 
@@ -1378,84 +1625,138 @@ hist(wolfused$DistFromHumanAccess2)
 hist(wolfused$DistFromHighHumanAccess2)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 ## Data exploration by wolf pack
 
 ``` r
 par(mfrow = c(1,1))
 # Plot Bow Valley
-hist(wolfused$Elevation2[wolfused$pack=="Bow Valley"],breaks=50, xlim = c(1400,2250), probability = TRUE, main="Wolf Habitat Selection", xlab="Elevation") 
+hist(wolfused$Elevation2[wolfused$pack == "Bow Valley"],
+     breaks = 50, 
+     xlim = c(1400, 2250),
+     probability = TRUE,
+     main = "Wolf Habitat Selection",
+     xlab = "Elevation") 
 
 #Plot Red Deer
-hist(wolfused$Elevation2[wolfused$pack=="Red Deer"],breaks=50, col="darkgray",probability =TRUE, add=TRUE)
+hist(wolfused$Elevation2[wolfused$pack == "Red Deer"],
+     breaks = 50,
+     col = "darkgray",
+     probability = TRUE, 
+     add = TRUE)
+
 # Add legend
-legend("topright", c("Bow Valley", "Red Deer"), fill = c("white","darkgray"),border = "black")
+legend("topright", 
+       c("Bow Valley", "Red Deer"),
+       fill = c("white", "darkgray"),
+       border = "black")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-40-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
 So, the Red Deer wolf pack ‘uses’ higher elevations than the Bow Valley
 wolf pack. Now, repeat these steps on your own for all other covariates
 using the plotrix R package.
 
 ``` r
-par(mfrow = c(2,1))
-multhist(list(wolfused$Elevation2[wolfused$pack=="Bow Valley"],wolfused$Elevation2[wolfused$pack=="Red Deer"]), freq = TRUE, main = "Elevation")
+par(mfrow = c(2, 1))
+multhist(list(wolfused$Elevation2[wolfused$pack == "Bow Valley"],
+              wolfused$Elevation2[wolfused$pack == "Red Deer"]),
+         freq = TRUE,
+         main = "Elevation")
 # I chose to put a legend in the lower right hand graph. 
 # That's what the additional arguments in the line below specify.
-multhist(list(wolfused$DistFromHumanAccess2[wolfused$pack=="Bow Valley"],wolfused$DistFromHumanAccess2[wolfused$pack=="Red Deer"]), freq = TRUE, main = "Distance From Humans", legend.text = c("Bow Valley", "Red Deer"), args.legend = list(bty = "n"))
+multhist(list(wolfused$DistFromHumanAccess2[wolfused$pack == "Bow Valley"], 
+              wolfused$DistFromHumanAccess2[wolfused$pack == "Red Deer"]),
+         freq = TRUE,
+         main = "Distance From Humans",
+         legend.text = c("Bow Valley", "Red Deer"),
+         args.legend = list(bty = "n"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
 Next the prey figures
 
 ``` r
-par(mfrow = c(2,3))
-multhist(list(wolfused$ELK_W[wolfused$pack=="Bow Valley"],wolfused$ELK_W[wolfused$pack=="Red Deer"]), freq = TRUE, main = "Elk HSI", legend.text = c("Bow Valley", "Red Deer"), args.legend = list(bty = "n"))
-multhist(list(wolfused$DEER_W[wolfused$pack=="Bow Valley"],wolfused$DEER_W[wolfused$pack=="Red Deer"]), freq = TRUE, main = "Deer HSI", legend.text = c("Bow Valley", "Red Deer"), args.legend = list(bty = "n"))
-multhist(list(wolfused$MOOSE_W[wolfused$pack=="Bow Valley"],wolfused$MOOSE_W[wolfused$pack=="Red Deer"]), freq = TRUE, main = "Moose HSI", legend.text = c("Bow Valley", "Red Deer"), args.legend = list(bty = "n"))
-multhist(list(wolfused$SHEEP_W[wolfused$pack=="Bow Valley"],wolfused$SHEEP_W[wolfused$pack=="Red Deer"]), freq = TRUE, main = "Sheep HSI", legend.text = c("Bow Valley", "Red Deer"), args.legend = list(bty = "n"))
-multhist(list(wolfused$GOAT_W[wolfused$pack=="Bow Valley"],wolfused$GOAT_W[wolfused$pack=="Red Deer"]), freq = TRUE, main = "Goat HSI", legend.text = c("Bow Valley", "Red Deer"), args.legend = list(bty = "n"))
+par(mfrow = c(2, 3))
+multhist(list(wolfused$ELK_W[wolfused$pack == "Bow Valley"],
+              wolfused$ELK_W[wolfused$pack == "Red Deer"]),
+         freq = TRUE, 
+         main = "Elk HSI",
+         legend.text = c("Bow Valley", "Red Deer"),
+         args.legend = list(bty = "n"))
+multhist(list(wolfused$DEER_W[wolfused$pack == "Bow Valley"],
+              wolfused$DEER_W[wolfused$pack == "Red Deer"]),
+         freq = TRUE, 
+         main = "Deer HSI",
+         legend.text = c("Bow Valley", "Red Deer"),
+         args.legend = list(bty = "n"))
+multhist(list(wolfused$MOOSE_W[wolfused$pack == "Bow Valley"],
+              wolfused$MOOSE_W[wolfused$pack == "Red Deer"]), 
+         freq = TRUE, 
+         main = "Moose HSI",
+         legend.text = c("Bow Valley", "Red Deer"),
+         args.legend = list(bty = "n"))
+multhist(list(wolfused$SHEEP_W[wolfused$pack == "Bow Valley"],
+              wolfused$SHEEP_W[wolfused$pack == "Red Deer"]),
+         freq = TRUE, 
+         main = "Sheep HSI",
+         legend.text = c("Bow Valley", "Red Deer"),
+         args.legend = list(bty = "n"))
+multhist(list(wolfused$GOAT_W[wolfused$pack == "Bow Valley"],
+              wolfused$GOAT_W[wolfused$pack == "Red Deer"]),
+         freq = TRUE, 
+         main = "Goat HSI",
+         legend.text = c("Bow Valley", "Red Deer"), 
+         args.legend = list(bty = "n"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 ## Boxplots (from the lattice package)
 
 ``` r
-bwplot(ELK_W + DEER_W+MOOSE_W+ SHEEP_W+GOAT_W~pack, auto.key=TRUE,allow.multiple = TRUE,data=wolfused, outer=TRUE)
+bwplot(ELK_W + DEER_W + MOOSE_W + SHEEP_W + GOAT_W ~ pack, 
+       auto.key = TRUE, 
+       allow.multiple = TRUE,
+       data = wolfused,
+       outer = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-43-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 ``` r
-bwplot(DistFromHumanAccess2 + DistFromHighHumanAccess2 + Elevation2~pack, auto.key=TRUE,allow.multiple = TRUE,data=wolfused, outer=TRUE)
+bwplot(DistFromHumanAccess2 + DistFromHighHumanAccess2 + Elevation2 ~ pack, 
+       auto.key = TRUE,
+       allow.multiple = TRUE,
+       data = wolfused,
+       outer = TRUE)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-43-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-23-2.png)<!-- -->
 
 ## Summary Statistics
 
 ``` r
-aggregate(Elevation2 ~ pack, data=wolfused, FUN=mean)
+aggregate(Elevation2 ~ pack, data = wolfused, FUN = mean)
 ```
 
     ##         pack Elevation2
-    ## 1 Bow Valley   1451.127
-    ## 2   Red Deer   1864.125
+    ## 1 Bow Valley   1453.723
+    ## 2   Red Deer   1875.350
 
 ``` r
-aggregate(DistFromHumanAccess2 ~ pack, data=wolfused, FUN=mean)
+aggregate(DistFromHumanAccess2 ~ pack, data = wolfused, FUN = mean)
 ```
 
     ##         pack DistFromHumanAccess2
-    ## 1 Bow Valley             256.9808
-    ## 2   Red Deer             492.9217
+    ## 1 Bow Valley             262.5451
+    ## 2   Red Deer             506.9533
 
 ``` r
-aggregate(.~pack, data=wolfused[c("pack", "DEER_W", "ELK_W", "MOOSE_W", "SHEEP_W", "GOAT_W")], mean)
+aggregate(. ~ pack, data = wolfused[c("pack", "DEER_W", "ELK_W", "MOOSE_W", "SHEEP_W", "GOAT_W")], mean)
 ```
 
     ##         pack   DEER_W   ELK_W  MOOSE_W  SHEEP_W  GOAT_W
@@ -1463,7 +1764,7 @@ aggregate(.~pack, data=wolfused[c("pack", "DEER_W", "ELK_W", "MOOSE_W", "SHEEP_W
     ## 2   Red Deer 3.712500 4.08750 4.125000 3.175000 2.57500
 
 ``` r
-sapply(wolfused, median, na.rm=TRUE)
+sapply(wolfused, median, na.rm = TRUE)
 ```
 
     ## Warning in mean.default(sort(x, partial = half + 0L:1L)[half + 0L:1L]): argument
@@ -1474,9 +1775,9 @@ sapply(wolfused, median, na.rm=TRUE)
     ##                    ELK_W                  SHEEP_W                   GOAT_W 
     ##                   4.0000                   3.0000                   1.0000 
     ##                   WOLF_W               Elevation2     DistFromHumanAccess2 
-    ##                   5.0000                1437.7133                 232.7071 
+    ##                   5.0000                1443.5486                 231.0527 
     ## DistFromHighHumanAccess2                     pack                     used 
-    ##                 218.4318                       NA                   1.0000
+    ##                 208.6503                       NA                   1.0000
 
 ## Summary Statistics with Tibble
 
@@ -1485,15 +1786,15 @@ library(tidyverse)
 ```
 
     ## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.2 ──
-    ## ✔ tibble  3.1.8     ✔ purrr   1.0.0
-    ## ✔ tidyr   1.2.1     ✔ stringr 1.5.0
+    ## ✔ tibble  3.1.8     ✔ purrr   0.3.4
+    ## ✔ tidyr   1.2.1     ✔ stringr 1.4.1
     ## ✔ readr   2.1.3     ✔ forcats 0.5.2
     ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-    ## ✖ tidyr::extract() masks terra::extract(), raster::extract()
+    ## ✖ tidyr::extract() masks terra::extract()
     ## ✖ dplyr::filter()  masks stats::filter()
     ## ✖ dplyr::id()      masks adehabitatLT::id()
     ## ✖ dplyr::lag()     masks stats::lag()
-    ## ✖ dplyr::select()  masks raster::select(), MASS::select()
+    ## ✖ dplyr::select()  masks MASS::select()
 
 ``` r
 wolf_df <- as_tibble(wolfused)
@@ -1504,8 +1805,8 @@ wolf_df %>% group_by(pack) %>% summarise(mean(Elevation2))
     ## # A tibble: 2 × 2
     ##   pack       `mean(Elevation2)`
     ##   <chr>                   <dbl>
-    ## 1 Bow Valley              1451.
-    ## 2 Red Deer                1864.
+    ## 1 Bow Valley              1454.
+    ## 2 Red Deer                1875.
 
 ``` r
 wolf_df %>% group_by(pack) %>% summarise(mean(DistFromHumanAccess2))
@@ -1514,8 +1815,8 @@ wolf_df %>% group_by(pack) %>% summarise(mean(DistFromHumanAccess2))
     ## # A tibble: 2 × 2
     ##   pack       `mean(DistFromHumanAccess2)`
     ##   <chr>                             <dbl>
-    ## 1 Bow Valley                         257.
-    ## 2 Red Deer                           493.
+    ## 1 Bow Valley                         263.
+    ## 2 Red Deer                           507.
 
 ``` r
 wolf_df %>% group_by(pack) %>% summarise(mean(DistFromHighHumanAccess2))
@@ -1524,8 +1825,8 @@ wolf_df %>% group_by(pack) %>% summarise(mean(DistFromHighHumanAccess2))
     ## # A tibble: 2 × 2
     ##   pack       `mean(DistFromHighHumanAccess2)`
     ##   <chr>                                 <dbl>
-    ## 1 Bow Valley                             207.
-    ## 2 Red Deer                              4540.
+    ## 1 Bow Valley                             213.
+    ## 2 Red Deer                              4543.
 
 ``` r
 wolf_df %>% group_by(pack) %>% summarise(mean(MOOSE_W))
